@@ -113,27 +113,17 @@ impl<'a> MssqlWriter<'a> {
             let file = File::create(self.dir.join(format!("{}.sql", table.name)))
                 .expect("Unable to create file");
             let mut file = BufWriter::new(file);
-            file.write("[".as_bytes()).expect("Unable to write data");
 
             let rows = stream.into_first_result().await?;
-            let mut initial = true;
-
-            for row in rows {
-                if !initial {
-                    file.write(",".as_bytes()).expect("Unable to write data");
-                } else {
-                    initial = false;
-                }
-
+            let rows: Vec<HashMap<&str, DataType>> = rows.into_iter().map(|row| {
                 let mut key_value_map = HashMap::new();
                 for (idx, column) in table.columns.iter().enumerate() {
-                    key_value_map.insert(&*column.name, mssql_value(&column.data_type, &row, idx)?);
+                    key_value_map.insert(&*column.name, mssql_value(&column.data_type, &row, idx).unwrap());
                 }
-                file.write(serde_json::to_string(&key_value_map).unwrap().as_bytes())
-                    .expect("Unable to write data");
-            }
+                key_value_map
+            }).collect();
 
-            file.write("]".as_bytes()).expect("Unable to write data");
+            file.write(serde_json::to_string_pretty(&rows).unwrap().as_bytes())?;
             file.flush()?;
         }
 
