@@ -13,8 +13,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
     let contents =
