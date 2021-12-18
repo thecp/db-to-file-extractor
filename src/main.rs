@@ -28,15 +28,15 @@ async fn main() -> anyhow::Result<()> {
         config::DatabaseType::MsSQL => {
             let mssql_writer = MssqlWriter::new(&config, opt.output).await?;
             match opt._type {
-                OutputType::JSON => mssql_writer.database_to_json().await?,
-                OutputType::SQL => mssql_writer.database_to_sql().await?
+                OutputType::Json => mssql_writer.database_to_json().await?,
+                OutputType::Sql => mssql_writer.database_to_sql().await?
             }
         },
         config::DatabaseType::MySQL => {
             let mysql_writer = MySqlWriter::new(&config, opt.output).await?;
             match opt._type {
-                OutputType::JSON => mysql_writer.database_to_json().await?,
-                OutputType::SQL => mysql_writer.database_to_sql().await?
+                OutputType::Json => mysql_writer.database_to_json().await?,
+                OutputType::Sql => mysql_writer.database_to_sql().await?
             }
         },
     }
@@ -58,8 +58,8 @@ struct Opt {
 
 #[derive(Debug)]
 enum OutputType {
-    JSON,
-    SQL,
+    Json,
+    Sql,
 }
 
 impl FromStr for OutputType {
@@ -67,9 +67,9 @@ impl FromStr for OutputType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.eq("json") {
-            Ok(Self::JSON)
+            Ok(Self::Json)
         } else if s.eq("sql") {
-            Ok(Self::SQL)
+            Ok(Self::Sql)
         } else {
             bail!("output type can only be json or sql")
         }

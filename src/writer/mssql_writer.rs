@@ -54,28 +54,32 @@ impl<'a> MssqlWriter<'a> {
             let file = File::create(self.dir.join(format!("{}.sql", table.name)))
                 .expect("Unable to create file");
             let mut file = BufWriter::new(file);
-            file.write(format!("INSERT INTO {} ({}) VALUES ", &table.name, table_str).as_bytes())
-                .expect("Unable to write data");
+            file.write_all(
+                format!("INSERT INTO {} ({}) VALUES ", &table.name, table_str).as_bytes(),
+            )
+            .expect("Unable to write data");
 
             let rows = stream.into_first_result().await?;
             let mut initial = true;
 
             for row in rows {
                 if !initial {
-                    file.write(",".as_bytes()).expect("Unable to write data");
+                    file.write_all(",".as_bytes())
+                        .expect("Unable to write data");
                 } else {
                     initial = false;
                 }
 
                 let mut values = Vec::new();
                 for (idx, column) in table.columns.iter().enumerate() {
-                    values.push(mssql_value(&schema.get(column).unwrap(), &row, idx)?);
+                    values.push(mssql_value(schema.get(column).unwrap(), &row, idx)?);
                 }
-                file.write(sql_to_string(&values).unwrap().as_bytes())
+                file.write_all(sql_to_string(&values).unwrap().as_bytes())
                     .expect("Unable to write data");
             }
 
-            file.write(";".as_bytes()).expect("Unable to write data");
+            file.write_all(";".as_bytes())
+                .expect("Unable to write data");
             file.flush()?;
         }
 
@@ -110,14 +114,14 @@ impl<'a> MssqlWriter<'a> {
                     for (idx, column) in table.columns.iter().enumerate() {
                         key_value_map.insert(
                             (*column).as_str(),
-                            mssql_value(&schema.get(column).unwrap(), &row, idx).unwrap(),
+                            mssql_value(schema.get(column).unwrap(), &row, idx).unwrap(),
                         );
                     }
                     key_value_map
                 })
                 .collect();
 
-            file.write(serde_json::to_string_pretty(&rows).unwrap().as_bytes())?;
+            file.write_all(serde_json::to_string_pretty(&rows).unwrap().as_bytes())?;
             file.flush()?;
         }
 

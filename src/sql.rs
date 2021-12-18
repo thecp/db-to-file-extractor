@@ -1,6 +1,6 @@
 use crate::data_types::DataType;
 
-pub fn sql_to_string(data: &Vec<DataType>) -> anyhow::Result<String> {
+pub fn sql_to_string(data: &[DataType]) -> anyhow::Result<String> {
     Ok(format!(
         "({})",
         data.iter()

@@ -33,7 +33,7 @@ impl<'a> DatabaseWriter for MySqlWriter<'a> {
 }
 
 impl<'a> MySqlWriter<'a> {
-    pub async fn new(config: &'a Config, dir: PathBuf) -> anyhow::Result<MySqlWriter<'_>> {
+    pub async fn new(config: &'a Config, dir: PathBuf) -> anyhow::Result<MySqlWriter<'a>> {
         let pools = get_connection_pool(config).await?;
         Ok(MySqlWriter { config, dir, pools })
     }
@@ -54,14 +54,16 @@ impl<'a> MySqlWriter<'a> {
             let file = File::create(self.dir.join(format!("{}.sql", table.name)))
                 .expect("Unable to create file");
             let mut file = BufWriter::new(file);
-            file.write(format!("INSERT INTO {} ({}) VALUES ", &table.name, table_str).as_bytes())
-                .expect("Unable to write data");
+            file.write_all(
+                format!("INSERT INTO {} ({}) VALUES ", &table.name, table_str).as_bytes(),
+            )
+            .expect("Unable to write data");
 
             let mut initial = true;
 
             while let Some(row) = rows.try_next().await? {
                 if !initial {
-                    file.write(",".as_bytes()).expect("Unable to write data");
+                    file.write_all(",".as_bytes()).expect("Unable to write data");
                 } else {
                     initial = false;
                 }
@@ -70,11 +72,11 @@ impl<'a> MySqlWriter<'a> {
                 for column in &table.columns {
                     values.push(mysql_value(schema.get(column).unwrap(), &row, column)?);
                 }
-                file.write(sql_to_string(&values).unwrap().as_bytes())
+                file.write_all(sql_to_string(&values).unwrap().as_bytes())
                     .expect("Unable to write data");
             }
 
-            file.write(";".as_bytes()).expect("Unable to write data");
+            file.write_all(";".as_bytes()).expect("Unable to write data");
             file.flush()?;
         }
 
@@ -97,13 +99,13 @@ impl<'a> MySqlWriter<'a> {
             let file = File::create(self.dir.join(format!("/tmp/{}.json", table.name)))
                 .expect("Unable to create file");
             let mut file = BufWriter::new(file);
-            file.write("[".as_bytes()).expect("Unable to write data");
+            file.write_all("[".as_bytes()).expect("Unable to write data");
 
             let mut initial = true;
 
             while let Some(row) = rows.try_next().await? {
                 if !initial {
-                    file.write(",".as_bytes()).expect("Unable to write data");
+                    file.write_all(",".as_bytes()).expect("Unable to write data");
                 } else {
                     initial = false;
                 }
@@ -112,14 +114,14 @@ impl<'a> MySqlWriter<'a> {
                 for column in &table.columns {
                     key_value_map.insert(
                         column,
-                        mysql_value(&schema.get(column).unwrap(), &row, column)?,
+                        mysql_value(schema.get(column).unwrap(), &row, column)?,
                     );
                 }
-                file.write(serde_json::to_string(&key_value_map).unwrap().as_bytes())
+                file.write_all(serde_json::to_string(&key_value_map).unwrap().as_bytes())
                     .expect("Unable to write data");
             }
 
-            file.write("]".as_bytes()).expect("Unable to write data");
+            file.write_all("]".as_bytes()).expect("Unable to write data");
             file.flush()?;
         }
 

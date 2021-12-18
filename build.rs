@@ -33,7 +33,7 @@ fn main() {
 
     let file = File::create("schema.json").expect("Unable to create file");
     let mut file = BufWriter::new(file);
-    file.write(serde_json::to_string_pretty(&schema).unwrap().as_bytes())
+    file.write_all(serde_json::to_string_pretty(&schema).unwrap().as_bytes())
         .expect("Unable to write data");
     file.flush().unwrap();
 }
