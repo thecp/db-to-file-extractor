@@ -5,11 +5,12 @@ use std::path::PathBuf;
 use tiberius::Client;
 use tiberius::Row;
 use tokio::net::TcpStream;
-use tokio_util::compat::{TokioAsyncWriteCompatExt, Compat};
+use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
-use crate::config::{Config, DataType};
-use crate::DatabaseWriter;
+use crate::config::Config;
+use crate::data_types::DataType;
 use crate::sql::sql_to_string;
+use crate::DatabaseWriter;
 
 pub struct MssqlWriter<'a> {
     config: &'a Config,
@@ -36,18 +37,16 @@ impl<'a> MssqlWriter<'a> {
 
     async fn database_to_sql_(&self) -> anyhow::Result<()> {
         let mut client = self.new_client().await?;
-        
+
         for table in &self.config.tables {
             let schema = self.get_schema_for_table(&table.name).await?;
 
-            let table_str = table
-                .columns
-                .join(",");
+            let table_str = table.columns.join(",");
             let sql = format!(
                 "select {} from {} where {}",
                 table_str,
                 table.name,
-                table.get_where_clause()
+                table.where_clause.as_ref().unwrap_or(&"1=1".to_string())
             );
 
             let stream = client.query(sql, &[]).await?;
@@ -89,14 +88,12 @@ impl<'a> MssqlWriter<'a> {
         for table in &self.config.tables {
             let schema = self.get_schema_for_table(&table.name).await?;
 
-            let table_str = table
-                .columns
-                .join(",");
+            let table_str = table.columns.join(",");
             let sql = format!(
                 "select {} from {} where {}",
                 table_str,
                 table.name,
-                table.get_where_clause()
+                table.where_clause.as_ref().unwrap_or(&"1=1".to_string())
             );
 
             let stream = client.query(sql, &[]).await?;
@@ -106,13 +103,19 @@ impl<'a> MssqlWriter<'a> {
             let mut file = BufWriter::new(file);
 
             let rows = stream.into_first_result().await?;
-            let rows: Vec<HashMap<&str, DataType>> = rows.into_iter().map(|row| {
-                let mut key_value_map = HashMap::new();
-                for (idx, column) in table.columns.iter().enumerate() {
-                    key_value_map.insert((*column).as_str(), mssql_value(&schema.get(column).unwrap(), &row, idx).unwrap());
-                }
-                key_value_map
-            }).collect();
+            let rows: Vec<HashMap<&str, DataType>> = rows
+                .into_iter()
+                .map(|row| {
+                    let mut key_value_map = HashMap::new();
+                    for (idx, column) in table.columns.iter().enumerate() {
+                        key_value_map.insert(
+                            (*column).as_str(),
+                            mssql_value(&schema.get(column).unwrap(), &row, idx).unwrap(),
+                        );
+                    }
+                    key_value_map
+                })
+                .collect();
 
             file.write(serde_json::to_string_pretty(&rows).unwrap().as_bytes())?;
             file.flush()?;
@@ -130,8 +133,12 @@ impl<'a> MssqlWriter<'a> {
         Ok(Client::connect(db_config, tcp.compat_write()).await?)
     }
 
-    async fn get_schema_for_table<'b>(&self, table_name: &'b str) -> anyhow::Result<HashMap<String, String>> {
-        let sql = "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=@P1";
+    async fn get_schema_for_table<'b>(
+        &self,
+        table_name: &'b str,
+    ) -> anyhow::Result<HashMap<String, String>> {
+        let sql =
+            "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=@P1";
         let mut client = self.new_client().await?;
 
         let stream = client.query(sql, &[&table_name.to_string()]).await?;
@@ -148,11 +155,7 @@ impl<'a> MssqlWriter<'a> {
     }
 }
 
-fn mssql_value(
-    data_type: &str,
-    row: &Row,
-    column_idx: usize,
-) -> anyhow::Result<DataType> {
+fn mssql_value(data_type: &str, row: &Row, column_idx: usize) -> anyhow::Result<DataType> {
     match data_type {
         "varchar" | "nvarchar" => {
             let t: Option<&str> = row.try_get(column_idx)?;
@@ -168,6 +171,6 @@ fn mssql_value(
         "datetimeoffset" => Ok(DataType::DateTime(row.try_get(column_idx)?)),
         "date" => Ok(DataType::Date(row.try_get(column_idx)?)),
         "time" => Ok(DataType::Time(row.try_get(column_idx)?)),
-        _ => unimplemented!()
+        _ => unimplemented!(),
     }
 }

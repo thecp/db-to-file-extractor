@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Config",
+  "examples": [
+    {
+      "database": {
+        "database": "test_database",
+        "database_type": "mssql",
+        "password": "passw0rd!",
+        "server": "localhost",
+        "user": "testuser"
+      },
+      "tables": [
+        {
+          "columns": [],
+          "name": "some_table",
+          "where_clause": "where 1=1"
+        }
+      ]
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "database": {
+      "type": "object",
+      "properties": {
+        "database": {
+          "type": "string"
+        },
+        "database_type": true,
+        "password": {
+          "type": "string"
+        },
+        "server": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        }
+      }
+    },
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "where_clause": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

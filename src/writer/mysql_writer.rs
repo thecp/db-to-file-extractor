@@ -8,9 +8,10 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 
-use crate::config::{Config, DataType};
-use crate::DatabaseWriter;
+use crate::config::Config;
+use crate::data_types::DataType;
 use crate::sql::sql_to_string;
+use crate::DatabaseWriter;
 
 pub struct MySqlWriter<'a> {
     config: &'a Config,
@@ -41,14 +42,12 @@ impl<'a> MySqlWriter<'a> {
         for table in &self.config.tables {
             let schema = self.get_schema_for_table(&table.name).await?;
 
-            let table_str = table
-                .columns
-                .join(",");
+            let table_str = table.columns.join(",");
             let sql = format!(
                 "select {} from {} where {}",
                 table_str,
                 table.name,
-                table.get_where_clause()
+                table.where_clause.as_ref().unwrap_or(&"1=1".to_string())
             );
             let mut rows = sqlx::query(&sql).fetch(&self.pools);
 
@@ -86,14 +85,12 @@ impl<'a> MySqlWriter<'a> {
         for table in &self.config.tables {
             let schema = self.get_schema_for_table(&table.name).await?;
 
-            let table_str = table
-                .columns
-                .join(",");
+            let table_str = table.columns.join(",");
             let sql = format!(
                 "select {} from {} where {}",
                 table_str,
                 table.name,
-                table.get_where_clause()
+                table.where_clause.as_ref().unwrap_or(&"1=1".to_string())
             );
             let mut rows = sqlx::query(&sql).fetch(&self.pools);
 
@@ -129,7 +126,10 @@ impl<'a> MySqlWriter<'a> {
         Ok(())
     }
 
-    async fn get_schema_for_table<'b>(&self, table_name: &'b str) -> Result<HashMap<String, String>, sqlx::Error> {
+    async fn get_schema_for_table<'b>(
+        &self,
+        table_name: &'b str,
+    ) -> Result<HashMap<String, String>, sqlx::Error> {
         let sql = format!("DESCRIBE {}", table_name);
         let mut rows = sqlx::query(&sql).fetch(&self.pools);
 
@@ -161,7 +161,7 @@ fn mysql_value(
         "datetime" => unimplemented!(),
         "date" => unimplemented!(),
         "time" => unimplemented!(),
-        _ => unimplemented!()
+        _ => unimplemented!(),
     }
 }
 
@@ -174,12 +174,17 @@ async fn get_connection_pool(config: &Config) -> Result<Pool<MySql>, sqlx::Error
     Ok(pool)
 }
 
-fn data_type_regex<>(data_type: &str) -> (String, Option<i32>) {
+fn data_type_regex(data_type: &str) -> (String, Option<i32>) {
     let reg = Regex::new(r"([a-z]+)(?:\((\d)*\))*").unwrap();
     let matches = reg.captures(data_type).unwrap();
     let t = &matches[1];
 
-    (t.to_owned(), matches.get(2).map(|elem| elem.as_str().parse::<i32>().unwrap()))
+    (
+        t.to_owned(),
+        matches
+            .get(2)
+            .map(|elem| elem.as_str().parse::<i32>().unwrap()),
+    )
 }
 
 #[cfg(test)]
@@ -189,6 +194,9 @@ mod tests {
     #[test]
     fn test_data_type_regex() {
         assert_eq!(("int".to_owned(), None), data_type_regex("int"));
-        assert_eq!(("varchar".to_owned(), Some(5)), data_type_regex("varchar(5)"));
+        assert_eq!(
+            ("varchar".to_owned(), Some(5)),
+            data_type_regex("varchar(5)")
+        );
     }
 }

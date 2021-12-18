@@ -1,12 +1,14 @@
 pub mod config;
+pub mod data_types;
 pub mod writer;
 pub mod sql;
 
 use anyhow::bail;
-use config::Config;
+use config::{Config, DatabaseType};
 use writer::DatabaseWriter;
 use writer::mssql_writer::MssqlWriter;
 use writer::mysql_writer::MySqlWriter;
+use tiberius::AuthMethod;
 
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -71,5 +73,34 @@ impl FromStr for OutputType {
         } else {
             bail!("output type can only be json or sql")
         }
+    }
+}
+
+// TODO move this somwhere else
+impl Config {
+    pub fn connection_string(&self) -> String {
+        match self.database.database_type {
+            DatabaseType::MySQL => {
+                format!(
+                    "mysql://{}:{}@{}/{}",
+                    self.database.user,
+                    self.database.password,
+                    self.database.server,
+                    self.database.database
+                )
+            },
+            _ => unimplemented!()
+        }
+    }
+
+    pub fn mssql_config(&self) -> tiberius::Config {
+        let mut db_config = tiberius::Config::new();
+     
+        db_config.host(&self.database.server);
+        db_config.port(1433);
+        db_config.authentication(AuthMethod::sql_server(&self.database.user, &self.database.password));
+        db_config.trust_cert(); // on production, it is not a good idea to do this
+
+        db_config
     }
 }
