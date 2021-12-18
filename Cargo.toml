@@ -7,11 +7,13 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-tiberius = { version = "0.6.5", features = ["chrono", "rust_decimal", "vendored-openssl"] }
-structopt = "0.3"
+async-trait = "0.1"
+futures = "0.3"
+regex = "1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "*" }
 sqlx = { version = "0.5", features = [ "any", "runtime-tokio-rustls", "mysql", "mssql" ] }
+structopt = "0.3"
+tiberius = { version = "0.6.5", features = ["chrono", "rust_decimal", "vendored-openssl"] }
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.6", features = ["compat"] }
-futures = "0.3"

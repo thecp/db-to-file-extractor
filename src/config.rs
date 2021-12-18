@@ -49,7 +49,7 @@ impl Config {
 #[derive(Deserialize, Debug)]
 pub struct TableConfig {
     pub name: String,
-    pub columns: Vec<ColumnConfig>,
+    pub columns: Vec<String>,
     #[serde(alias = "where")]
     pub where_clause: Option<String>,
 }
@@ -61,13 +61,6 @@ impl TableConfig {
             None => "1=1"
         }
     }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ColumnConfig {
-    pub name: String,
-    #[serde(alias = "type")]
-    pub data_type: DataTypeInput,
 }
 
 #[derive(Deserialize, Debug)]
@@ -91,22 +84,6 @@ pub enum DataType {
     DateTime(Option<chrono::NaiveDateTime>),
     Date(Option<chrono::NaiveDate>),
     Time(Option<chrono::NaiveTime>)
-}
-
-#[derive(Deserialize, Debug)]
-pub enum DataTypeInput {
-    String,
-    Int,
-    BigInt,
-    Float,
-    Double,
-    Decimal,
-    Bool,
-    Uuid,
-    DateTimeUtc,
-    DateTime,
-    Date,
-    Time
 }
 
 impl Serialize for DataType {

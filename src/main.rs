@@ -13,7 +13,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
     let contents =
@@ -23,20 +24,22 @@ fn main() -> anyhow::Result<()> {
 
     match config.database.database_type {
         config::DatabaseType::MsSQL => {
-            let mssql_writer = MssqlWriter::new(&config, opt.output);
+            let mssql_writer = MssqlWriter::new(&config, opt.output).await?;
             match opt._type {
-                OutputType::JSON => mssql_writer.database_to_json(),
-                OutputType::SQL => mssql_writer.database_to_sql()
+                OutputType::JSON => mssql_writer.database_to_json().await?,
+                OutputType::SQL => mssql_writer.database_to_sql().await?
             }
         },
         config::DatabaseType::MySQL => {
-            let mysql_writer = MySqlWriter::new(&config, opt.output)?;
+            let mysql_writer = MySqlWriter::new(&config, opt.output).await?;
             match opt._type {
-                OutputType::JSON => mysql_writer.database_to_json(),
-                OutputType::SQL => mysql_writer.database_to_sql()
+                OutputType::JSON => mysql_writer.database_to_json().await?,
+                OutputType::SQL => mysql_writer.database_to_sql().await?
             }
         },
     }
+
+    Ok(())
 }
 
 #[derive(Debug, StructOpt)]
