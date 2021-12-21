@@ -19,6 +19,9 @@ jobs:
           rust-version: ${{ matrix.rust }}
           components: clippy,rustfmt
 
+      - name: Load Rust Cache
+        uses: Swatinem/rust-cache@v1
+
       - uses: actions/checkout@v2
 
       - name: Run tests
