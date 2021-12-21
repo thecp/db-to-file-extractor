@@ -10,8 +10,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        rust: [nightly]
+        include:
+          - { rust: nightly, os: ubuntu-latest,  file_extension: '' }
+          - { rust: nightly, os: macos-latest,   file_extension: '' }
+          - { rust: nightly, os: windows-latest, file_extension: '.exe' }
     steps:
       - name: Setup Rust
         uses: hecrj/setup-rust-action@v1
@@ -33,5 +35,5 @@ jobs:
       - name: Archive build artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: db-extractor
-          path: target/release/db-extractor
+          name: db-extractor-${{ matrix.os }}
+          path: target/release/db-extractor${{ matrix.file_extension }}
