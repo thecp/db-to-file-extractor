@@ -43,8 +43,9 @@ impl<'a> MssqlWriter<'a> {
 
             let table_str = table.columns.join(",");
             let sql = format!(
-                "select {} from {} where {}",
+                "select {} from {}.dbo.{} where {}",
                 table_str,
+                self.config.database.database,
                 table.name,
                 table.where_clause.as_ref().unwrap_or(&"1=1".to_string())
             );
@@ -94,15 +95,16 @@ impl<'a> MssqlWriter<'a> {
 
             let table_str = table.columns.join(",");
             let sql = format!(
-                "select {} from {} where {}",
+                "select {} from {}.dbo.{} where {}",
                 table_str,
+                self.config.database.database,
                 table.name,
                 table.where_clause.as_ref().unwrap_or(&"1=1".to_string())
             );
 
             let stream = client.query(sql, &[]).await?;
 
-            let file = File::create(self.dir.join(format!("{}.sql", table.name)))
+            let file = File::create(self.dir.join(format!("{}.json", table.name)))
                 .expect("Unable to create file");
             let mut file = BufWriter::new(file);
 
@@ -141,8 +143,10 @@ impl<'a> MssqlWriter<'a> {
         &self,
         table_name: &'b str,
     ) -> anyhow::Result<HashMap<String, String>> {
-        let sql =
-            "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=@P1";
+        let sql = format!(
+            "SELECT COLUMN_NAME, DATA_TYPE FROM {}.INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=@P1",
+            self.config.database.database
+        );
         let mut client = self.new_client().await?;
 
         let stream = client.query(sql, &[&table_name.to_string()]).await?;
@@ -171,7 +175,7 @@ fn mssql_value(data_type: &str, row: &Row, column_idx: usize) -> anyhow::Result<
         "decimal" => Ok(DataType::Decimal(row.try_get(column_idx)?)),
         "smallint" => Ok(DataType::Bool(row.try_get(column_idx)?)),
         "uniqueidentifier" => Ok(DataType::Uuid(row.try_get(column_idx)?)),
-        "datetime" => Ok(DataType::DateTimeUtc(row.try_get(column_idx)?)),
+        "datetime" => Ok(DataType::DateTime(row.try_get(column_idx)?)),
         "datetimeoffset" => Ok(DataType::DateTime(row.try_get(column_idx)?)),
         "date" => Ok(DataType::Date(row.try_get(column_idx)?)),
         "time" => Ok(DataType::Time(row.try_get(column_idx)?)),
