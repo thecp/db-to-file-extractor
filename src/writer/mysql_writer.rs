@@ -160,10 +160,7 @@ fn mysql_value(
         "float" => Ok(DataType::Float(row.try_get(&column_name)?)),
         "double" => Ok(DataType::Double(row.try_get(&column_name)?)),
         "boolean" => Ok(DataType::Bool(row.try_get(&column_name)?)),
-        "datetime" => unimplemented!(),
-        "date" => unimplemented!(),
-        "time" => unimplemented!(),
-        _ => unimplemented!(),
+        "datetime" | "date" | "time" | _ => panic!("{} not yet implemented", data_type),
     }
 }
 

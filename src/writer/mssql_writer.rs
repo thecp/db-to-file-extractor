@@ -174,11 +174,12 @@ fn mssql_value(data_type: &str, row: &Row, column_idx: usize) -> anyhow::Result<
         "float" => Ok(DataType::Float(row.try_get(column_idx)?)),
         "decimal" => Ok(DataType::Decimal(row.try_get(column_idx)?)),
         "smallint" => Ok(DataType::Bool(row.try_get(column_idx)?)),
+        "bit" => Ok(DataType::Bool(row.try_get(column_idx)?)),
         "uniqueidentifier" => Ok(DataType::Uuid(row.try_get(column_idx)?)),
         "datetime" => Ok(DataType::DateTime(row.try_get(column_idx)?)),
         "datetimeoffset" => Ok(DataType::DateTime(row.try_get(column_idx)?)),
         "date" => Ok(DataType::Date(row.try_get(column_idx)?)),
         "time" => Ok(DataType::Time(row.try_get(column_idx)?)),
-        _ => unimplemented!(),
+        _ => panic!("{} not yet implemented", data_type),
     }
 }
